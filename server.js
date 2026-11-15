@@ -68,14 +68,10 @@ function clearFailedLogin(identifier) {
   loginAttempts.delete(identifier);
 }
 
-// Generatore codici stanza univoci a 5 caratteri
+// Generatore codici stanza brevissimi a 4 cifre numeriche (es. '4821')
 function generateRoomCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Esclusi 0, O, 1, I
-  let code = '';
-  for (let i = 0; i < 5; i++) {
-    code += chars.charAt(crypto.randomInt(0, chars.length));
-  }
-  return `OCA-${code}`;
+  const code = crypto.randomInt(1000, 10000).toString(); // Es. 1000 - 9999
+  return code;
 }
 
 // Confronto sicuro contro Timing Attacks

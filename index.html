@@ -680,7 +680,7 @@
             In attesa che l'Admin crei la stanza. Non appena l'Admin ti dà il codice (o inquadri il suo QR Code), inseriscilo qui sotto:
           </p>
           <div style="display: flex; gap: 8px;">
-            <input type="text" id="input-room-code" class="form-input" placeholder="Codice Stanza (es. OCA-7X)" maxlength="8" style="margin-bottom: 0; text-transform: uppercase;">
+            <input type="text" id="input-room-code" class="form-input" placeholder="PIN a 4 cifre (es. 4821)" maxlength="6" inputmode="numeric" style="margin-bottom: 0; text-align: center; font-size: 1.1rem; letter-spacing: 0.15em; font-weight: 800;">
             <button id="btn-submit-join" class="tactile-btn" style="width: auto; padding: 0 16px;">
               Entra! 🚀
             </button>
@@ -1409,17 +1409,21 @@
     // Submit Giocatore
     document.getElementById('btn-submit-join').onclick = () => {
       const name = cachedPlayerName || inputPlayerName.value.trim();
-      const code = inputRoomCode.value.trim().toUpperCase();
+      let code = inputRoomCode.value.trim().toUpperCase();
       if (!name) {
         boxStep2Waiting.style.display = 'none';
         boxStep1Name.style.display = 'block';
         return alert("Inserisci prima il tuo nome!");
       }
       if (!code) {
-        return alert("Inserisci il Codice Stanza fornito dall'Admin per entrare!");
+        return alert("Inserisci il PIN della stanza a 4 cifre!");
       }
 
+      // Se l'utente scrive o omette 'OCA-', gestiamo entrambi i casi in modo tollerante
+      const cleanCode = code.replace(/[^A-Z0-9]/g, '');
+
       if (socket && socket.connected) {
+        // Proviamo a entrare col codice digitato o normalizzato
         socket.emit('player_join_room', { roomId: code, playerName: name }, (res) => {
           if (res.success) {
             currentRoomId = code;
@@ -1428,7 +1432,18 @@
             setupRoomHeader(code);
             alert(`🎉 Benvenuto ${name}! Sei entrato nella stanza ${code}!`);
           } else {
-            alert(res.message);
+            // Tentativo secondario se c'è discordanza di prefisso
+            socket.emit('player_join_room', { roomId: cleanCode, playerName: name }, (res2) => {
+              if (res2.success) {
+                currentRoomId = cleanCode;
+                localPlayerId = socket.id;
+                modalLobby.classList.add('hidden');
+                setupRoomHeader(cleanCode);
+                alert(`🎉 Benvenuto ${name}! Sei entrato nella stanza ${cleanCode}!`);
+              } else {
+                alert(res.message || res2.message);
+              }
+            });
           }
         });
       } else {
